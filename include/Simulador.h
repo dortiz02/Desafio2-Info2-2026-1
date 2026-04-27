@@ -1,11 +1,11 @@
 #ifndef SIMULADOR_H
 #define SIMULADOR_H
-
 #include <iostream>
+#include <random>
 #include "Partido.h"
 #include "Lista.h"
 
-// Contiene toda la logica de probabilidad de simulacion
+// Contiene toda la logica probabilistica de simulacion
 // Separado de Partido para no mezclar responsabilidades
 class Simulador {
 private:
@@ -13,7 +13,7 @@ private:
     double beta;    // 0.4 — peso del promedio de goles en contra
     double mu;      // 1.35 — factor de escala global
 
-    // Genera número aleatorio entre 0.0 y 1.0
+    // Genera numero aleatorio uniforme [0.0, 1.0)
     double randProb() const;
 
 public:
@@ -21,14 +21,13 @@ public:
     Simulador(const Simulador& otro);  // copia — requerido por enunciado
     ~Simulador();
 
-    // Calcula goles esperados del equipo A contra el equipo B
+    // Calcula goles esperados del equipo A contra B
     double calcularLambda(const Equipo& a, const Equipo& b) const;
 
-    // Calcula posesion proporcional al ranking FIFA
-    // Menor ranking = mayor posesión
+    // Calcula posesion proporcional inversa al ranking FIFA
     double calcularPosesion(int rankingA, int rankingB) const;
 
-    // Selecciona aleatoriamente 11 índices de la plantilla
+    // Selecciona aleatoriamente 11 indices de la plantilla
     Lista<int> elegirConvocados(const Equipo& e) const;
 
     // Simula las metricas de un jugador convocado
