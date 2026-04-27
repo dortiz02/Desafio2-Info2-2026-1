@@ -1,83 +1,68 @@
 #include "../include/Simulador.h"
-#include <cstdlib>
+#include <random>
 #include <cmath>
 
-// ── Constructores ─────────────────────────────────────────────
+// Motor y distribucion estaticos — se inicializan una sola vez
+// usando random_device como semilla, que es C++ puro
+static std::mt19937                           motor(std::random_device{}());
+static std::uniform_real_distribution<double> distrib(0.0, 1.0);
 
 Simulador::Simulador() : alpha(0.6), beta(0.4), mu(1.35) {}
-
-Simulador::Simulador(const Simulador& otro)
-    : alpha(otro.alpha), beta(otro.beta), mu(otro.mu) {}
-
+Simulador::Simulador(const Simulador& otro) : alpha(otro.alpha), beta(otro.beta), mu(otro.mu) {}
 Simulador::~Simulador() {}
 
-// ── Helpers ───────────────────────────────────────────────────
+/// Genera numero aleatorio uniforme en [0.0, 1.0)
 
-// Num aleatorio uniforme [0, 1)
 double Simulador::randProb() const {
-    return static_cast<double>(std::rand()) / (static_cast<double>(RAND_MAX) + 1.0);
+    return distrib(motor);
 }
 
-// ── Logica de simulacion ──────────────────────────────────────
-
-// Formula del enunciado:
-// λA = µ * (GFA/µ)^α * (GCB/µ)^β
+/// Calcula goles esperados del equipo A contra B
+/// Formula del enunciado
 double Simulador::calcularLambda(const Equipo& a, const Equipo& b) const {
     double gfa = a.getPromGF();
     double gcb = b.getPromGC();
     return mu * std::pow(gfa / mu, alpha) * std::pow(gcb / mu, beta);
 }
 
-// Posesion proporcional inversa al ranking
-// equipo con menor ranking (mejor) tiene mas posesión
-// Mismo modelo que el desempate por sesgo aleatorio
+/// Posesion proporcional inversa al ranking FIFA
+/// Menor ranking (mejor equipo) implica mayor posesion
 double Simulador::calcularPosesion(int rankingA, int rankingB) const {
-    // Invertir ranking: mejor equipo (ranking más bajo) → número mayor
     double pesoA = 1.0 / rankingA;
     double pesoB = 1.0 / rankingB;
     return (pesoA / (pesoA + pesoB)) * 100.0;
 }
 
-// Elige 11 indices únicos aleatorios de la plantilla de 26
+/// Selecciona 11 indices unicos aleatorios de la plantilla de 26
+/// Usa Fisher-Yates parcial — solo necesita los primeros 11
 Lista<int> Simulador::elegirConvocados(const Equipo& e) const {
     int disponibles[26];
     for (int i = 0; i < 26; i++) disponibles[i] = i;
-
-    // Fisher-Yates shuffle parcial — solo necesitamos 11
-    Lista<int> seleccionados;
-    int tam = 26;
+    Lista<int> sel;
     for (int i = 0; i < 11; i++) {
-        int idx = i + std::rand() % (tam - i);
-        // intercambiar
-        int tmp          = disponibles[i];
-        disponibles[i]   = disponibles[idx];
-        disponibles[idx] = tmp;
-        seleccionados.agregar(disponibles[i]);
+        std::uniform_int_distribution<int> rango(i, 25);
+        int idx = rango(motor);
+        int tmp = disponibles[i]; disponibles[i] = disponibles[idx]; disponibles[idx] = tmp;
+        sel.agregar(disponibles[i]);
     }
-    return seleccionados;
+    return sel;
 }
 
-// Simula las metricas de un jugador en el partido
-// golesRestantes se decrementa cuando el jugador marca
+/// Simula las metricas de un jugador en el partido
+/// Las probabilidades son estaticas por jugador — independientes de si ya anoto
 void Simulador::simularJugador(ActaJugador& aj, int& golesRestantes) const {
-    // Goles — prob 4% por jugador, hasta agotar los goles esperados
+    // Goles: 4% por jugador hasta agotar los goles esperados del equipo
     if (golesRestantes > 0 && randProb() < 0.04) {
         aj.setGoles(aj.getGoles() + 1);
         golesRestantes--;
     }
-
-    // Tarjetas amarillas — 6% primera, 1.15% segunda
+    // Amarillas: 6% primera, 1.15% segunda
     int amarillas = 0;
-    if (randProb() < 0.06) {
-        amarillas++;
-        if (randProb() < 0.0115) amarillas++;
-    }
+    if (randProb() < 0.06) { amarillas++; if (randProb() < 0.0115) amarillas++; }
     aj.setTarjetasAmarillas(amarillas);
-
-    // Roja — solo si tiene dos amarillas
+    // Roja: solo si acumula dos amarillas
     aj.setTarjetasRojas(amarillas >= 2 ? 1 : 0);
-
-    // Faltas — 13% primera, 2.75% segunda, 0.7% tercera
+    // Faltas: 13% primera, 2.75% segunda, 0.7% tercera
     int faltas = 0;
     if (randProb() < 0.13) {
         faltas++;
@@ -89,77 +74,64 @@ void Simulador::simularJugador(ActaJugador& aj, int& golesRestantes) const {
     aj.setFaltas(faltas);
 }
 
-// Simula el partido completo
+/// Simula el partido completo — llena las dos actas
+/// Si prorroga=true, los minutos se contabilizan en 120
 void Simulador::simularPartido(Partido& p, bool prorroga) {
-    int minutos = prorroga ? 120 : 90;
+    int minutos   = prorroga ? 120 : 90;
+    Equipo* local = p.getActaLocal().getEquipo();
+    Equipo* visit = p.getActaVisitante().getEquipo();
 
-    Equipo* local    = p.getActaLocal().getEquipo();
-    Equipo* visitante = p.getActaVisitante().getEquipo();
+    double lambdaL = calcularLambda(*local, *visit);
+    double lambdaV = calcularLambda(*visit, *local);
+    int golesL = static_cast<int>(std::round(lambdaL));
+    int golesV = static_cast<int>(std::round(lambdaV));
 
-    // Calcular goles esperados para cada equipo
-    double lambdaLocal    = calcularLambda(*local, *visitante);
-    double lambdaVisitante = calcularLambda(*visitante, *local);
+    Lista<int> idxL = elegirConvocados(*local);
+    Lista<int> idxV = elegirConvocados(*visit);
 
-    // Redondear a enteros para la simulación
-    int golesLocal    = static_cast<int>(std::round(lambdaLocal));
-    int golesVisitante = static_cast<int>(std::round(lambdaVisitante));
-
-    // Elegir convocados
-    Lista<int> idxLocal    = elegirConvocados(*local);
-    Lista<int> idxVisitante = elegirConvocados(*visitante);
-
-    // Crear actas de jugadores y simular
     for (int i = 0; i < 11; i++) {
-        ActaJugador aj(&local->getPlantilla()[idxLocal[i]]);
+        ActaJugador aj(&local->getPlantilla()[idxL[i]]);
         aj.setMinutosJugados(minutos);
-        simularJugador(aj, golesLocal);
+        simularJugador(aj, golesL);
         p.getActaLocal().agregarConvocado(aj);
     }
-
     for (int i = 0; i < 11; i++) {
-        ActaJugador aj(&visitante->getPlantilla()[idxVisitante[i]]);
+        ActaJugador aj(&visit->getPlantilla()[idxV[i]]);
         aj.setMinutosJugados(minutos);
-        simularJugador(aj, golesVisitante);
+        simularJugador(aj, golesV);
         p.getActaVisitante().agregarConvocado(aj);
     }
 
-    // Los goles restantes que no se asignaron a jugadores
-    // se asignan al último convocado para cuadrar el marcador
-    if (golesLocal > 0)
-        p.getActaLocal().getConvocados()[10].setGoles(
-            p.getActaLocal().getConvocados()[10].getGoles() + golesLocal);
+    // Goles restantes que no se asignaron a jugadores van al ultimo convocado
+    if (golesL > 0) p.getActaLocal().getConvocados()[10].setGoles(
+        p.getActaLocal().getConvocados()[10].getGoles() + golesL);
+    if (golesV > 0) p.getActaVisitante().getConvocados()[10].setGoles(
+        p.getActaVisitante().getConvocados()[10].getGoles() + golesV);
 
-    if (golesVisitante > 0)
-        p.getActaVisitante().getConvocados()[10].setGoles(
-            p.getActaVisitante().getConvocados()[10].getGoles() + golesVisitante);
-
-    // Calcular goles totales reales de cada acta
-    int totalLocal = 0, totalVisitante = 0;
+    // Calcular totales reales de goles
+    int totalL = 0, totalV = 0;
     for (int i = 0; i < 11; i++) {
-        totalLocal     += p.getActaLocal().getConvocados()[i].getGoles();
-        totalVisitante += p.getActaVisitante().getConvocados()[i].getGoles();
+        totalL += p.getActaLocal().getConvocados()[i].getGoles();
+        totalV += p.getActaVisitante().getConvocados()[i].getGoles();
     }
+    p.getActaLocal().setGolesAFavor(totalL);
+    p.getActaLocal().setGolesEnContra(totalV);
+    p.getActaVisitante().setGolesAFavor(totalV);
+    p.getActaVisitante().setGolesEnContra(totalL);
 
-    p.getActaLocal().setGolesAFavor      (totalLocal);
-    p.getActaLocal().setGolesEnContra    (totalVisitante);
-    p.getActaVisitante().setGolesAFavor  (totalVisitante);
-    p.getActaVisitante().setGolesEnContra(totalLocal);
-
-    // Posesion
-    double posLocal = calcularPosesion(local->getRankingFIFA(),
-                                       visitante->getRankingFIFA());
-    p.getActaLocal().setPosesion(posLocal);
-    p.getActaVisitante().setPosesion(100.0 - posLocal);
-
+    // Posesion proporcional al ranking
+    double posL = calcularPosesion(local->getRankingFIFA(), visit->getRankingFIFA());
+    p.getActaLocal().setPosesion(posL);
+    p.getActaVisitante().setPosesion(100.0 - posL);
     p.setResueltoEnProrroga(prorroga);
 }
 
-// Desempate por ranking — sesgo proporcional inverso al ranking
+/// Desempate por ranking — sesgo proporcional inverso al ranking FIFA
+/// Devuelve 0 si gana local, 1 si gana visitante
 int Simulador::romperEmpate(const Equipo& local, const Equipo& visitante) const {
-    double pesoLocal    = 1.0 / local.getRankingFIFA();
-    double pesoVisitante = 1.0 / visitante.getRankingFIFA();
-    double probLocal    = pesoLocal / (pesoLocal + pesoVisitante);
-    return (randProb() < probLocal) ? 0 : 1;  // 0=local, 1=visitante
+    double pesoL = 1.0 / local.getRankingFIFA();
+    double pesoV = 1.0 / visitante.getRankingFIFA();
+    return (randProb() < pesoL / (pesoL + pesoV)) ? 0 : 1;
 }
 
 std::ostream& operator<<(std::ostream& os, const Simulador& s) {
