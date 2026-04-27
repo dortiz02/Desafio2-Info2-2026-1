@@ -1,5 +1,6 @@
 #ifndef SIMULADOR_H
 #define SIMULADOR_H
+
 #include <iostream>
 #include <random>
 #include "Partido.h"
@@ -14,6 +15,7 @@ private:
     double mu;      // 1.35 — factor de escala global
 
     // Genera numero aleatorio uniforme [0.0, 1.0)
+    // Usa mt19937 de C++ — sin rand() ni srand()
     double randProb() const;
 
 public:
