@@ -1,5 +1,6 @@
 #ifndef GRUPO_H
 #define GRUPO_H
+
 #include <string>
 #include <iostream>
 #include "Equipo.h"
@@ -10,7 +11,7 @@ class Simulador;
 
 // Representa un grupo de la fase clasificatoria
 // Contiene 4 equipos y genera/almacena sus 6 partidos
-// Es dueño de los Partido por valor, pero NO de los Equipo (punteros)
+// Es dueno de los Partido por valor, pero NO de los Equipo (punteros)
 class Grupo {
 private:
     char           letra;
@@ -18,7 +19,7 @@ private:
     Lista<Partido> partidos;
     int            puntos[4];
 
-    /// Busca el índice de un equipo dentro de la lista interna
+    /// Busca el indice de un equipo dentro de la lista interna
     /// Devuelve -1 si no se encuentra
     int indiceEquipo(Equipo* e) const;
 
@@ -28,18 +29,20 @@ public:
     Grupo(const Grupo& otro);
     ~Grupo();
 
-    char            getLetra()       const;
+    char                  getLetra()       const;
     Lista<Equipo*>&       getEquipos();
     Lista<Partido>&       getPartidos();
-    const Lista<Partido>& getPartidos() const;
-    int             getPuntos(int i) const;
+    const Lista<Partido>& getPartidos()    const;
+    int                   getPuntos(int i) const;
 
-    void agregarEquipo(Equipo* e);
-    void generarPartidos();
-    void asignarFechas(const std::string& fechaInicio, int* partidosPorDia, int diasDisponibles);
-    void actualizarPuntos(int idxLocal, int idxVisitante, int golesL, int golesV);
-    void simularPartidos(Simulador& sim);
-    void imprimirTabla() const;
+    void agregarEquipo   (Equipo* e);
+    void generarPartidos ();
+    void asignarFechas   (const std::string& fechaInicio,
+                          int* partidosPorDia, int diasDisponibles);
+    void actualizarPuntos(int idxLocal, int idxVisitante,
+                          int golesL, int golesV);
+    void simularPartidos (Simulador& sim);
+    void imprimirTabla   () const;
 
     Lista<Equipo*> getTablaClasificacion() const;
 
