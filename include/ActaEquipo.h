@@ -1,44 +1,33 @@
 #ifndef ACTAEQUIPO_H
 #define ACTAEQUIPO_H
-
 #include <iostream>
 #include "Equipo.h"
 #include "ActaJugador.h"
 #include "Lista.h"
-
-// Registra lo que hizo un equipo en un partido especifico
-// No es duena del Equipo — solo guarda un puntero
 class ActaEquipo {
 private:
     Equipo*            equipo;
     int                golesAFavor;
     int                golesEnContra;
     double             posesion;
-    Lista<ActaJugador> convocados;   // exactamente 11
-
+    Lista<ActaJugador> convocados;
 public:
     ActaEquipo();
     ActaEquipo(Equipo* e);
-    ActaEquipo(const ActaEquipo& otra);  // copia — requerido por enunciado
+    ActaEquipo(const ActaEquipo& otra);
+    ActaEquipo& operator=(const ActaEquipo& otra);
     ~ActaEquipo();
-
-    Equipo*                   getEquipo()        const;
-    int                       getGolesAFavor()   const;
-    int                       getGolesEnContra() const;
-    double                    getPosesion()      const;
+    Equipo*             getEquipo()        const;
+    int                 getGolesAFavor()   const;
+    int                 getGolesEnContra() const;
+    double              getPosesion()      const;
     Lista<ActaJugador>&       getConvocados();
-    const Lista<ActaJugador>& getConvocados()    const;
-
+    const Lista<ActaJugador>& getConvocados() const;
     void setGolesAFavor  (int v);
     void setGolesEnContra(int v);
     void setPosesion     (double v);
-
     void agregarConvocado(const ActaJugador& aj);
-
-    // Construye EstadisticasEquipo del partido para acumular al historico
     EstadisticasEquipo toStats(bool gano, bool empato) const;
-
     friend std::ostream& operator<<(std::ostream& os, const ActaEquipo& ae);
 };
-
 #endif
