@@ -49,14 +49,17 @@ std::string Torneo::normalizarConfederacion(const std::string& conf) const {
 }
 
 /// Devuelve los 8 mejores terceros por puntos para armar R16
-Lista<Equipo*> Torneo::mejoresTerceros(Lista<Lista<Equipo*>>& tablas) const {
+/// El parametro tablas se reserva para criterios de desempate adicionales
+Lista<Equipo*> Torneo::mejoresTerceros(Lista<Lista<Equipo*>>& /*tablas*/) const {
     Lista<Equipo*> terceros;
     Lista<int>     pts;
     for (int g=0; g<grupos.getTam(); g++) {
         Lista<Equipo*> tabla=grupos[g].getTablaClasificacion();
         if (tabla.getTam()>=3) {
             terceros.agregar(tabla[2]);
-            pts.agregar(grupos[g].getPuntos(2));
+            // Usar getPuntosDeEquipo para obtener puntos por puntero
+            // y no por indice interno — evita el bug de indice fijo
+            pts.agregar(grupos[g].getPuntosDeEquipo(tabla[2]));
         }
         medidor.incrementar(4);
     }
@@ -113,9 +116,13 @@ void Torneo::configurarR16(Lista<Lista<Equipo*>>& tablas) {
         }
     }
 
-    // 2. Primeros restantes vs 4 peores segundos
+    // Usar getPuntosDeEquipo para obtener puntos reales de cada segundo
+    // y no el indice fijo 1 que puede no corresponder al segundo clasificado
     Lista<int> ptsSeg;
-    for (int g=0;g<grupos.getTam();g++) { ptsSeg.agregar(grupos[g].getPuntos(1)); medidor.incrementar(); }
+    for (int g=0;g<grupos.getTam();g++) {
+        ptsSeg.agregar(grupos[g].getPuntosDeEquipo(segundos[g]));
+        medidor.incrementar();
+    }
     int peores=0;
     while (peores<4) {
         int minP=999, minIdx=-1;
@@ -417,21 +424,25 @@ void Torneo::generarEstadisticas() {
         Jugador* maxJ=nullptr; int maxG=-1;
         Lista<Jugador>& pl=campeon->getPlantilla();
         for (int i=0;i<pl.getTam();i++) {
-            if (pl[i].getStatsHistoricas().getGoles()>maxG) {
-                maxG=pl[i].getStatsHistoricas().getGoles(); maxJ=&pl[i];
-            }
+            int g=pl[i].getStatsHistoricas().getGoles();
+            // Tomar siempre el primero, o el que tenga mas goles
+            if (maxJ==nullptr || g>maxG) { maxG=g; maxJ=&pl[i]; }
             medidor.incrementar();
         }
-        if (maxJ!=nullptr) std::cout<<*maxJ<<"\n";
+        if (maxJ!=nullptr)
+            std::cout<<"Camiseta #"<<maxJ->getNumeroCamiseta()
+                     <<" | "<<maxJ->getNombre()<<" "<<maxJ->getApellido()
+                     <<" | Goles: "<<maxG<<"\n";
     }
     // Top 3 goleadores
     std::cout<<"\n--- Top 3 goleadores del torneo ---\n";
     Lista<Jugador*> top=getTopGoleadores(3);
     for (int i=0;i<top.getTam();i++) std::cout<<(i+1)<<". "<<*top[i]<<"\n";
-    // Equipo con mas goles historicos
+    // Equipo con mas goles historicos — inicializar con el primero
     std::cout<<"\n--- Equipo con mas goles historicos ---\n";
-    Equipo* maxEq=nullptr; int maxGEq=-1;
-    for (int i=0;i<equipos.getTam();i++) {
+    Equipo* maxEq = equipos[0];
+    int maxGEq    = equipos[0]->getStatsHistoricas().getGolesAFavor();
+    for (int i=1;i<equipos.getTam();i++) {
         int gf=equipos[i]->getStatsHistoricas().getGolesAFavor();
         if (gf>maxGEq) { maxGEq=gf; maxEq=equipos[i]; }
         medidor.incrementar();
