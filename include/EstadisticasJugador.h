@@ -3,8 +3,9 @@
 
 #include <fstream>
 
-// Estadísticas históricas acumuladas de un jugador
-// Separada de Jugador para poder usar operator+= limpiamente
+// Estadisticas históricas acumuladas de un jugador
+// Se actualiza luego de cada partido — separada de Jugador
+// para poder usar operator+= limpiamente
 class EstadisticasJugador {
 private:
     int partidosJugados;
@@ -16,9 +17,11 @@ private:
     int faltas;
 
 public:
+    // Constructores
     EstadisticasJugador();
-    EstadisticasJugador(const EstadisticasJugador& otra);
+    EstadisticasJugador(const EstadisticasJugador& otra);  // copia
 
+    // Getters
     int getPartidosJugados()    const;
     int getGoles()              const;
     int getMinutosJugados()     const;
@@ -27,6 +30,7 @@ public:
     int getTarjetasRojas()      const;
     int getFaltas()             const;
 
+    // Setters
     void setPartidosJugados   (int v);
     void setGoles             (int v);
     void setMinutosJugados    (int v);
@@ -35,9 +39,13 @@ public:
     void setTarjetasRojas     (int v);
     void setFaltas            (int v);
 
+    // Acumula los valores de otra estadistica sobre esta
     EstadisticasJugador& operator+=(const EstadisticasJugador& otra);
-    EstadisticasJugador& operator= (const EstadisticasJugador& otra);
 
+    // Asignacion
+    EstadisticasJugador& operator=(const EstadisticasJugador& otra);
+
+    // Persistencia
     void guardar(std::fstream& archivo) const;
     void cargar (std::fstream& archivo);
 };
