@@ -4,7 +4,7 @@
 
 // Motor y distribucion estaticos — se inicializan una sola vez
 // usando random_device como semilla, que es C++ puro
-static std::mt19937                           motor(std::random_device{}());
+static std::mt19937                          motor(std::random_device{}());
 static std::uniform_real_distribution<double> distrib(0.0, 1.0);
 
 Simulador::Simulador() : alpha(0.6), beta(0.4), mu(1.35) {}
@@ -12,13 +12,12 @@ Simulador::Simulador(const Simulador& otro) : alpha(otro.alpha), beta(otro.beta)
 Simulador::~Simulador() {}
 
 /// Genera numero aleatorio uniforme en [0.0, 1.0)
-
 double Simulador::randProb() const {
     return distrib(motor);
 }
 
 /// Calcula goles esperados del equipo A contra B
-/// Formula del enunciado
+/// Formula del enunciado:
 double Simulador::calcularLambda(const Equipo& a, const Equipo& b) const {
     double gfa = a.getPromGF();
     double gcb = b.getPromGC();
@@ -35,10 +34,12 @@ double Simulador::calcularPosesion(int rankingA, int rankingB) const {
 
 /// Selecciona 11 indices unicos aleatorios de la plantilla de 26
 /// Usa Fisher-Yates parcial — solo necesita los primeros 11
-Lista<int> Simulador::elegirConvocados(const Equipo& e) const {
+/// El parametro e se reserva para extensiones futuras (filtrar lesionados, etc)
+Lista<int> Simulador::elegirConvocados(const Equipo& /*e*/) const {
     int disponibles[26];
     for (int i = 0; i < 26; i++) disponibles[i] = i;
     Lista<int> sel;
+    std::uniform_int_distribution<int> distInt(0, 25);
     for (int i = 0; i < 11; i++) {
         std::uniform_int_distribution<int> rango(i, 25);
         int idx = rango(motor);
@@ -64,13 +65,7 @@ void Simulador::simularJugador(ActaJugador& aj, int& golesRestantes) const {
     aj.setTarjetasRojas(amarillas >= 2 ? 1 : 0);
     // Faltas: 13% primera, 2.75% segunda, 0.7% tercera
     int faltas = 0;
-    if (randProb() < 0.13) {
-        faltas++;
-        if (randProb() < 0.0275) {
-            faltas++;
-            if (randProb() < 0.007) faltas++;
-        }
-    }
+    if (randProb() < 0.13) { faltas++; if (randProb() < 0.0275) { faltas++; if (randProb() < 0.007) faltas++; } }
     aj.setFaltas(faltas);
 }
 
@@ -135,8 +130,6 @@ int Simulador::romperEmpate(const Equipo& local, const Equipo& visitante) const 
 }
 
 std::ostream& operator<<(std::ostream& os, const Simulador& s) {
-    os << "Simulador [alpha=" << s.alpha
-       << " beta=" << s.beta
-       << " mu=" << s.mu << "]";
+    os << "Simulador [alpha=" << s.alpha << " beta=" << s.beta << " mu=" << s.mu << "]";
     return os;
 }
