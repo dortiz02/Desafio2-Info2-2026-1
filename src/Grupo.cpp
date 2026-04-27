@@ -4,7 +4,8 @@
 
 Grupo::Grupo() : letra(' ') { for (int i=0;i<4;i++) puntos[i]=0; }
 Grupo::Grupo(char l) : letra(l) { for (int i=0;i<4;i++) puntos[i]=0; }
-Grupo::Grupo(const Grupo& otro) : letra(otro.letra), equipos(otro.equipos), partidos(otro.partidos) {
+Grupo::Grupo(const Grupo& otro)
+    : letra(otro.letra), equipos(otro.equipos), partidos(otro.partidos) {
     for (int i=0;i<4;i++) puntos[i]=otro.puntos[i];
 }
 Grupo::~Grupo() {}
@@ -15,6 +16,8 @@ Lista<Partido>&       Grupo::getPartidos()             { return partidos; }
 const Lista<Partido>& Grupo::getPartidos()       const { return partidos; }
 int                   Grupo::getPuntos(int i)    const { return (i>=0&&i<4)?puntos[i]:0; }
 
+/// Busca el indice de un equipo en la lista interna
+/// Devuelve -1 si no se encuentra
 int Grupo::indiceEquipo(Equipo* e) const {
     for (int i=0; i<equipos.getTam(); i++) if (equipos[i]==e) return i;
     return -1;
@@ -33,8 +36,8 @@ void Grupo::generarPartidos() {
 }
 
 /// Asigna fechas a los partidos respetando:
-/// - Máx 4 partidos por día en todo el torneo (partidosPorDia compartido)
-/// - Ningún equipo juega dos veces en menos de 3 días
+/// - Max 4 partidos por dia en todo el torneo (partidosPorDia compartido)
+/// - Ningun equipo juega dos veces en menos de 3 dias
 void Grupo::asignarFechas(const std::string& fechaInicio,
                            int* partidosPorDia, int diasDisponibles) {
     int dia  = std::stoi(fechaInicio.substr(0,2));
@@ -73,7 +76,7 @@ void Grupo::actualizarPuntos(int idxL, int idxV, int gL, int gV) {
     else              { puntos[idxV] += 3; }
 }
 
-/// Simula todos los partidos y actualiza históricos tras cada uno
+/// Simula todos los partidos y actualiza historicos tras cada uno
 void Grupo::simularPartidos(Simulador& sim) {
     int combL[6]={0,0,0,1,1,2};
     int combV[6]={1,2,3,2,3,3};
@@ -118,7 +121,9 @@ void Grupo::imprimirTabla() const {
     std::cout << "----|---------------------|----\n";
     for (int i=0; i<tabla.getTam(); i++) {
         int idx = indiceEquipo(tabla[i]);
-        std::cout << " " << (i+1) << "  | " << tabla[i]->getPais() << " | " << puntos[idx] << "\n";
+        std::cout << " " << (i+1) << "  | "
+                  << tabla[i]->getPais()
+                  << " | " << puntos[idx] << "\n";
     }
 }
 
