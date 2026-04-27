@@ -1,5 +1,6 @@
 #include "../include/EstadisticasJugador.h"
 
+// ── Constructores ─────────────────────────────────────────────
 EstadisticasJugador::EstadisticasJugador()
     : partidosJugados(0), goles(0), minutosJugados(0),
       asistencias(0), tarjetasAmarillas(0), tarjetasRojas(0), faltas(0) {}
@@ -13,6 +14,7 @@ EstadisticasJugador::EstadisticasJugador(const EstadisticasJugador& otra)
       tarjetasRojas    (otra.tarjetasRojas),
       faltas           (otra.faltas) {}
 
+// ── Getters ───────────────────────────────────────────────────
 int EstadisticasJugador::getPartidosJugados()   const { return partidosJugados;   }
 int EstadisticasJugador::getGoles()             const { return goles;             }
 int EstadisticasJugador::getMinutosJugados()    const { return minutosJugados;    }
@@ -21,6 +23,7 @@ int EstadisticasJugador::getTarjetasAmarillas() const { return tarjetasAmarillas
 int EstadisticasJugador::getTarjetasRojas()     const { return tarjetasRojas;     }
 int EstadisticasJugador::getFaltas()            const { return faltas;            }
 
+// ── Setters ───────────────────────────────────────────────────
 void EstadisticasJugador::setPartidosJugados   (int v) { partidosJugados   = v; }
 void EstadisticasJugador::setGoles             (int v) { goles             = v; }
 void EstadisticasJugador::setMinutosJugados    (int v) { minutosJugados    = v; }
@@ -29,6 +32,9 @@ void EstadisticasJugador::setTarjetasAmarillas (int v) { tarjetasAmarillas = v; 
 void EstadisticasJugador::setTarjetasRojas     (int v) { tarjetasRojas     = v; }
 void EstadisticasJugador::setFaltas            (int v) { faltas            = v; }
 
+// ── Operadores ────────────────────────────────────────────────
+
+// Acumula stats de un partido sobre el histórico
 EstadisticasJugador& EstadisticasJugador::operator+=(const EstadisticasJugador& otra) {
     partidosJugados   += otra.partidosJugados;
     goles             += otra.goles;
@@ -52,6 +58,9 @@ EstadisticasJugador& EstadisticasJugador::operator=(const EstadisticasJugador& o
     return *this;
 }
 
+// ── Persistencia ──────────────────────────────────────────────
+
+// Guarda en formato binario para eficiencia
 void EstadisticasJugador::guardar(std::fstream& archivo) const {
     archivo.write(reinterpret_cast<const char*>(&partidosJugados),   sizeof(int));
     archivo.write(reinterpret_cast<const char*>(&goles),             sizeof(int));
