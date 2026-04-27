@@ -1,5 +1,6 @@
 #include "../include/EstadisticasEquipo.h"
 
+// ── Constructores ─────────────────────────────────────────────
 EstadisticasEquipo::EstadisticasEquipo()
     : golesAFavor(0), golesEnContra(0), partidosGanados(0),
       partidosEmpatados(0), partidosPerdidos(0),
@@ -15,6 +16,7 @@ EstadisticasEquipo::EstadisticasEquipo(const EstadisticasEquipo& otra)
       tarjetasRojas    (otra.tarjetasRojas),
       faltas           (otra.faltas) {}
 
+// ── Getters ───────────────────────────────────────────────────
 int EstadisticasEquipo::getGolesAFavor()       const { return golesAFavor;       }
 int EstadisticasEquipo::getGolesEnContra()     const { return golesEnContra;     }
 int EstadisticasEquipo::getPartidosGanados()   const { return partidosGanados;   }
@@ -24,6 +26,7 @@ int EstadisticasEquipo::getTarjetasAmarillas() const { return tarjetasAmarillas;
 int EstadisticasEquipo::getTarjetasRojas()     const { return tarjetasRojas;     }
 int EstadisticasEquipo::getFaltas()            const { return faltas;            }
 
+// ── Setters ───────────────────────────────────────────────────
 void EstadisticasEquipo::setGolesAFavor       (int v) { golesAFavor       = v; }
 void EstadisticasEquipo::setGolesEnContra     (int v) { golesEnContra     = v; }
 void EstadisticasEquipo::setPartidosGanados   (int v) { partidosGanados   = v; }
@@ -33,6 +36,9 @@ void EstadisticasEquipo::setTarjetasAmarillas (int v) { tarjetasAmarillas = v; }
 void EstadisticasEquipo::setTarjetasRojas     (int v) { tarjetasRojas     = v; }
 void EstadisticasEquipo::setFaltas            (int v) { faltas            = v; }
 
+// ── Operadores ────────────────────────────────────────────────
+
+// Acumula stats de un partido sobre el histórico del equipo
 EstadisticasEquipo& EstadisticasEquipo::operator+=(const EstadisticasEquipo& otra) {
     golesAFavor       += otra.golesAFavor;
     golesEnContra     += otra.golesEnContra;
@@ -58,6 +64,7 @@ EstadisticasEquipo& EstadisticasEquipo::operator=(const EstadisticasEquipo& otra
     return *this;
 }
 
+// ── Persistencia ──────────────────────────────────────────────
 void EstadisticasEquipo::guardar(std::fstream& archivo) const {
     archivo.write(reinterpret_cast<const char*>(&golesAFavor),       sizeof(int));
     archivo.write(reinterpret_cast<const char*>(&golesEnContra),     sizeof(int));
