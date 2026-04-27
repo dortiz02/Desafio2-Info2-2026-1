@@ -2,8 +2,6 @@
 #include <iostream>
 #include <limits>
 
-// -- Constructores ----------------------------------------------------
-
 Menu::Menu()
     : archivoCSV("data/selecciones_clasificadas_mundial.csv"),
       archivoJugadores("data/jugadores.dat") {}
@@ -12,28 +10,25 @@ Menu::Menu(const std::string& csv, const std::string& jugadores)
     : archivoCSV(csv), archivoJugadores(jugadores) {}
 
 Menu::Menu(const Menu& otro)
-    : torneo          (otro.torneo),
-      archivoCSV      (otro.archivoCSV),
+    : torneo(otro.torneo), archivoCSV(otro.archivoCSV),
       archivoJugadores(otro.archivoJugadores) {}
 
 Menu::~Menu() {}
 
-// -- Helpers privados -------------------------------------------------
-
-/// Imprime las opciones del menu principal
+/// Imprime las opciones del menu principal en consola
 void Menu::mostrarOpciones() const {
-    std::cout << "\n╔══════════════════════════════════════╗\n";
-    std::cout <<   "║        UdeAWorldCup 2026             ║\n";
-    std::cout <<   "╠══════════════════════════════════════╣\n";
-    std::cout <<   "║ 1. Cargar datos (CSV)                ║\n";
-    std::cout <<   "║ 2. Conformar grupos (sorteo)         ║\n";
-    std::cout <<   "║ 3. Simular fase de grupos            ║\n";
-    std::cout <<   "║ 4. Transicion a R16                  ║\n";
-    std::cout <<   "║ 5. Simular fase eliminatoria         ║\n";
-    std::cout <<   "║ 6. Estadisticas finales              ║\n";
-    std::cout <<   "║ 7. Guardar datos actualizados        ║\n";
-    std::cout <<   "║ 0. Salir                             ║\n";
-    std::cout <<   "╚══════════════════════════════════════╝\n";
+    std::cout << "\n+--------------------------------------+\n";
+    std::cout <<   "|        UdeAWorldCup 2026             |\n";
+    std::cout <<   "+--------------------------------------+\n";
+    std::cout <<   "| 1. Cargar datos (CSV)                |\n";
+    std::cout <<   "| 2. Conformar grupos (sorteo)         |\n";
+    std::cout <<   "| 3. Simular fase de grupos            |\n";
+    std::cout <<   "| 4. Transicion a R16                  |\n";
+    std::cout <<   "| 5. Simular fase eliminatoria         |\n";
+    std::cout <<   "| 6. Estadisticas finales              |\n";
+    std::cout <<   "| 7. Guardar datos actualizados        |\n";
+    std::cout <<   "| 0. Salir                             |\n";
+    std::cout <<   "+--------------------------------------+\n";
     std::cout <<   "Opcion: ";
 }
 
@@ -73,8 +68,6 @@ bool Menu::r16Listo() const {
     }
     return true;
 }
-
-// -- Opciones del menu ------------------------------------------------
 
 /// Opcion 1: carga el CSV y genera plantillas artificiales
 /// Si existe archivo de jugadores previo, carga esas plantillas
@@ -125,16 +118,12 @@ void Menu::opcionPersistir() {
     std::cout << "[OK] Datos guardados en " << archivoJugadores << "\n";
 }
 
-// -- Loop principal ---------------------------------------------------
-
-/// Ejecuta el loop principal hasta que el usuario elija salir
+/// Loop principal — corre hasta que el usuario elija salir (0)
 void Menu::ejecutar() {
     int opcion = -1;
     while (opcion != 0) {
         mostrarOpciones();
         std::cin >> opcion;
-
-        // Limpiar buffer si la entrada no es valida
         if (std::cin.fail()) {
             std::cin.clear();
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -142,7 +131,6 @@ void Menu::ejecutar() {
             std::cout << "[!] Entrada invalida.\n";
             continue;
         }
-
         switch (opcion) {
             case 1: opcionCargar();               break;
             case 2: opcionConformarGrupos();       break;
