@@ -10,11 +10,30 @@ Grupo::Grupo(const Grupo& otro)
 }
 Grupo::~Grupo() {}
 
+// Operador de asignacion — necesario para usar Grupo en Lista<T>
+Grupo& Grupo::operator=(const Grupo& otro) {
+    if (this == &otro) return *this;
+    letra    = otro.letra;
+    equipos  = otro.equipos;
+    partidos = otro.partidos;
+    for (int i=0;i<4;i++) puntos[i]=otro.puntos[i];
+    return *this;
+}
+
 char                  Grupo::getLetra()         const { return letra;    }
 Lista<Equipo*>&       Grupo::getEquipos()              { return equipos;  }
 Lista<Partido>&       Grupo::getPartidos()             { return partidos; }
 const Lista<Partido>& Grupo::getPartidos()       const { return partidos; }
 int                   Grupo::getPuntos(int i)    const { return (i>=0&&i<4)?puntos[i]:0; }
+
+/// Devuelve los puntos del equipo identificado por puntero
+/// Busca su indice interno y retorna puntos[idx]
+/// Uso correcto cuando se tiene el Equipo* de la tabla clasificada
+int Grupo::getPuntosDeEquipo(Equipo* e) const {
+    int idx = indiceEquipo(e);
+    if (idx >= 0 && idx < 4) return puntos[idx];
+    return 0;
+}
 
 /// Busca el indice de un equipo en la lista interna
 /// Devuelve -1 si no se encuentra
@@ -103,11 +122,11 @@ Lista<Equipo*> Grupo::getTablaClasificacion() const {
     int orden[4]={0,1,2,3};
     for (int i=0;i<3;i++) for (int j=i+1;j<4;j++) {
         int a=orden[i], b=orden[j];
-        bool swap=false;
-        if      (pts[a]<pts[b]) swap=true;
-        else if (pts[a]==pts[b] && (gf[a]-gc[a])<(gf[b]-gc[b])) swap=true;
-        else if (pts[a]==pts[b] && (gf[a]-gc[a])==(gf[b]-gc[b]) && gf[a]<gf[b]) swap=true;
-        if (swap) { int tmp=orden[i]; orden[i]=orden[j]; orden[j]=tmp; }
+        bool sw=false;
+        if      (pts[a]<pts[b]) sw=true;
+        else if (pts[a]==pts[b] && (gf[a]-gc[a])<(gf[b]-gc[b])) sw=true;
+        else if (pts[a]==pts[b] && (gf[a]-gc[a])==(gf[b]-gc[b]) && gf[a]<gf[b]) sw=true;
+        if (sw) { int tmp=orden[i]; orden[i]=orden[j]; orden[j]=tmp; }
     }
     Lista<Equipo*> tabla;
     for (int i=0;i<4;i++) tabla.agregar(equipos[orden[i]]);
@@ -117,13 +136,12 @@ Lista<Equipo*> Grupo::getTablaClasificacion() const {
 void Grupo::imprimirTabla() const {
     Lista<Equipo*> tabla = getTablaClasificacion();
     std::cout << "\n=== GRUPO " << letra << " ===\n";
-    std::cout << "Pos | Pais                | Pts\n";
-    std::cout << "----|---------------------|----\n";
+    std::cout << "Pos | Pais                          | Pts\n";
+    std::cout << "----|-------------------------------|----\n";
     for (int i=0; i<tabla.getTam(); i++) {
-        int idx = indiceEquipo(tabla[i]);
         std::cout << " " << (i+1) << "  | "
                   << tabla[i]->getPais()
-                  << " | " << puntos[idx] << "\n";
+                  << " | " << getPuntosDeEquipo(tabla[i]) << "\n";
     }
 }
 
