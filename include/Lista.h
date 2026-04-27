@@ -4,7 +4,7 @@
 #include <fstream>
 
 // Template de lista dinamica propia — reemplaza contenedores STL
-// Usa memoria dinamica con redimensionamiento automatico
+// Usa memoria dinámica con redimensionamiento automático
 template <typename T>
 class Lista {
 private:
@@ -43,7 +43,7 @@ public:
         datos = nullptr;
     }
 
-    // Operador de asignacion
+    // Operador de asignación
     Lista<T>& operator=(const Lista<T>& otra) {
         if (this == &otra) return *this;
         delete[] datos;
@@ -64,7 +64,7 @@ public:
         datos[tam++] = elem;
     }
 
-    // Acceso por indice
+    // Acceso por índice
     T& operator[](int i) {
         return datos[i];
     }
@@ -73,19 +73,19 @@ public:
         return datos[i];
     }
 
-    // Tamano actual
+    // Tamaño actual
     int getTam() const {
         return tam;
     }
 
-    // Elimina el elemento en la posicion i
+    // Elimina el elemento en la posición i
     void eliminar(int i) {
         for (int j = i; j < tam - 1; j++)
             datos[j] = datos[j + 1];
         tam--;
     }
 
-    // Vacia la lista sin liberar capacidad
+    // Vacía la lista sin liberar capacidad
     void limpiar() {
         tam = 0;
     }
