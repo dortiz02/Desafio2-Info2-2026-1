@@ -1,7 +1,6 @@
 #include "../include/Torneo.h"
 #include <fstream>
 #include <iostream>
-#include <cstdlib>
 
 const std::string Torneo::FECHA_ELIMINATORIAS = "10-07-2026";
 
@@ -18,16 +17,35 @@ Torneo::~Torneo() {
     for (int i=0; i<equipos.getTam(); i++) { delete equipos[i]; equipos[i]=nullptr; }
 }
 
-/// Parsea una linea CSV separada por comas en campos individuales
-void Torneo::parsearLineaCSV(const std::string& linea,
+// -- Helpers privados -------------------------------------------------
+
+/// Parsea una linea con separador ';' en campos individuales
+/// Elimina caracteres '\r' al final de la linea (formato Windows)
+void Torneo::parsearLineaCSV(const std::string& lineaRaw,
                               std::string campos[], int maxCampos) const {
+    // Limpiar \r al final si existe
+    std::string linea = lineaRaw;
+    if (!linea.empty() && linea.back() == '\r') linea.pop_back();
+
     int idx=0, ini=0;
     for (int i=0; i<=(int)linea.size() && idx<maxCampos; i++) {
-        if (i==(int)linea.size() || linea[i]==',') {
+        if (i==(int)linea.size() || linea[i]==';') {
             campos[idx++]=linea.substr(ini, i-ini);
             ini=i+1;
         }
     }
+}
+
+/// Normaliza el nombre de la confederacion al formato interno
+/// Convierte "Concacaf" → "CONCACAF" para uniformidad
+std::string Torneo::normalizarConfederacion(const std::string& conf) const {
+    if (conf=="Concacaf" || conf=="CONCACAF" || conf=="concacaf") return "CONCACAF";
+    if (conf=="UEFA")     return "UEFA";
+    if (conf=="CONMEBOL") return "CONMEBOL";
+    if (conf=="CAF")      return "CAF";
+    if (conf=="AFC")      return "AFC";
+    if (conf=="OFC")      return "OFC";
+    return conf;
 }
 
 /// Devuelve los 8 mejores terceros por puntos para armar R16
@@ -42,7 +60,7 @@ Lista<Equipo*> Torneo::mejoresTerceros(Lista<Lista<Equipo*>>& tablas) const {
         }
         medidor.incrementar(4);
     }
-    // Ordenar por puntos descendente
+    // Ordenar por puntos descendente (burbuja)
     for (int i=0; i<terceros.getTam()-1; i++)
         for (int j=0; j<terceros.getTam()-i-1; j++) {
             if (pts[j]<pts[j+1]) {
@@ -57,6 +75,7 @@ Lista<Equipo*> Torneo::mejoresTerceros(Lista<Lista<Equipo*>>& tablas) const {
 }
 
 /// Configura R16: cabezas vs terceros, cabezas vs peores segundos, segundos entre si
+/// Garantiza que no se repitan enfrentamientos del mismo grupo
 void Torneo::configurarR16(Lista<Lista<Equipo*>>& tablas) {
     Etapa r16("R16");
     Lista<Equipo*> primeros, segundos;
@@ -144,32 +163,60 @@ void Torneo::configurarEtapa(Etapa& etapa, Lista<Equipo*>& clasificados) {
     }
 }
 
+// -- Funcionalidades principales --------------------------------------
+
 /// I - Lee el CSV y crea los 48 equipos en heap, genera plantillas
+/// Formato: ranking;pais;dt;federacion;confederacion;gf;gc;pg;pe;pp
+/// Salta las 2 primeras filas (titulo + encabezado de columnas)
 void Torneo::cargarDatos(const std::string& archivoCSV) {
     medidor.resetear();
     std::fstream archivo(archivoCSV, std::ios::in);
-    if (!archivo.is_open()) { std::cout<<"Error: no se pudo abrir "<<archivoCSV<<"\n"; return; }
+    if (!archivo.is_open()) {
+        std::cout << "Error: no se pudo abrir " << archivoCSV << "\n";
+        return;
+    }
+
     std::string linea;
-    std::getline(archivo, linea); // saltar encabezado
-    medidor.incrementar();
+
+    // Saltar fila 1: titulo del documento
+    std::getline(archivo, linea);
+    // Saltar fila 2: encabezado de columnas
+    std::getline(archivo, linea);
+    medidor.incrementar(2);
+
     while (std::getline(archivo, linea)) {
         medidor.incrementar();
-        if (linea.empty()) continue;
-        std::string campos[9];
-        parsearLineaCSV(linea, campos, 9);
-        Equipo* e=new Equipo(campos[0],campos[1],std::stoi(campos[2]),campos[3],
-                              std::stoi(campos[4]),std::stoi(campos[5]),
-                              std::stoi(campos[6]),std::stoi(campos[7]),std::stoi(campos[8]));
+        if (linea.empty() || linea == "\r") continue;
+
+        std::string campos[10];
+        parsearLineaCSV(linea, campos, 10);
+
+        // Columnas: 0=ranking, 1=pais, 2=dt, 3=federacion, 4=confederacion
+        //           5=gf, 6=gc, 7=pg, 8=pe, 9=pp
+        int         ranking = std::stoi(campos[0]);
+        std::string pais    = campos[1];
+        std::string dt      = campos[2];
+        std::string conf    = normalizarConfederacion(campos[4]);
+        int gf  = std::stoi(campos[5]);
+        int gc  = std::stoi(campos[6]);
+        int pg  = std::stoi(campos[7]);
+        int pe  = std::stoi(campos[8]);
+        int pp  = std::stoi(campos[9]);
+
+        Equipo* e = new Equipo(pais, conf, ranking, dt, gf, gc, pg, pe, pp);
         e->generarPlantilla();
         equipos.agregar(e);
-        medidor.incrementar(26);
+        medidor.incrementar(26); // generarPlantilla itera 26 veces
     }
+
     archivo.close();
+    std::cout << "Equipos cargados: " << equipos.getTam() << "\n";
     medidor.calcularMemoria(48,26,0,0,0,0);
     medidor.reportar("I - Carga de datos");
 }
 
 /// Guarda plantillas actualizadas en archivo binario propio
+/// Formato: [int numEquipos] por cada equipo: [int lenPais][chars pais][plantilla]
 void Torneo::persistirDatos(const std::string& archivoJugadores) {
     std::fstream archivo(archivoJugadores, std::ios::out|std::ios::binary|std::ios::trunc);
     if (!archivo.is_open()) return;
@@ -197,7 +244,10 @@ void Torneo::cargarPlantillas(const std::string& archivoJugadores) {
         std::string pais(lenPais,' ');
         archivo.read(&pais[0],lenPais);
         for (int j=0;j<equipos.getTam();j++) {
-            if (equipos[j]->getPais()==pais) { equipos[j]->cargarPlantilla(archivo); medidor.incrementar(26); break; }
+            if (equipos[j]->getPais()==pais) {
+                equipos[j]->cargarPlantilla(archivo);
+                medidor.incrementar(26); break;
+            }
             medidor.incrementar();
         }
     }
@@ -280,13 +330,16 @@ void Torneo::simularFaseEliminatoria() {
         medidor.incrementar(etapas[etapas.getTam()-1].getPartidos().getTam()*22);
     }
     // Perdedores de SF juegan 3er puesto
-    Lista<Partido>& partsSF=etapas[etapas.getTam()-1].getPartidos();
-    Lista<Equipo*>& clasSF =etapas[etapas.getTam()-1].getClasificados();
+    // Se capturan por valor ANTES de agregar mas etapas para evitar
+    // que la referencia quede invalida al redimensionar la lista
+    Lista<Partido> partsSFcopy = etapas[etapas.getTam()-1].getPartidos();
+    Lista<Equipo*> clasSFcopy  = etapas[etapas.getTam()-1].getClasificados();
+
     Lista<Equipo*> perdedores;
-    for (int i=0;i<partsSF.getTam();i++) {
-        Equipo* g=partsSF[i].getGanador();
-        Equipo* l=partsSF[i].getActaLocal().getEquipo();
-        Equipo* v=partsSF[i].getActaVisitante().getEquipo();
+    for (int i=0;i<partsSFcopy.getTam();i++) {
+        Equipo* g=partsSFcopy[i].getGanador();
+        Equipo* l=partsSFcopy[i].getActaLocal().getEquipo();
+        Equipo* v=partsSFcopy[i].getActaVisitante().getEquipo();
         perdedores.agregar(g==l?v:l);
         medidor.incrementar();
     }
@@ -301,7 +354,7 @@ void Torneo::simularFaseEliminatoria() {
     etapas.agregar(tercerPuesto);
     medidor.incrementar(22);
     Etapa final("Final");
-    configurarEtapa(final,clasSF);
+    configurarEtapa(final,clasSFcopy);
     etapas.agregar(final);
     etapas[etapas.getTam()-1].simularEtapa(simulador);
     etapas[etapas.getTam()-1].determinarClasificados();
@@ -364,7 +417,9 @@ void Torneo::generarEstadisticas() {
         Jugador* maxJ=nullptr; int maxG=-1;
         Lista<Jugador>& pl=campeon->getPlantilla();
         for (int i=0;i<pl.getTam();i++) {
-            if (pl[i].getStatsHistoricas().getGoles()>maxG) { maxG=pl[i].getStatsHistoricas().getGoles(); maxJ=&pl[i]; }
+            if (pl[i].getStatsHistoricas().getGoles()>maxG) {
+                maxG=pl[i].getStatsHistoricas().getGoles(); maxJ=&pl[i];
+            }
             medidor.incrementar();
         }
         if (maxJ!=nullptr) std::cout<<*maxJ<<"\n";
@@ -387,27 +442,34 @@ void Torneo::generarEstadisticas() {
     std::string buscar[]={"R16","R8","QF"};
     for (int e=0;e<3;e++)
         for (int i=0;i<etapas.getTam();i++) {
-            if (etapas[i].getNombre()==buscar[e]) { std::cout<<buscar[e]<<": "<<getConfMayorPresencia(etapas[i])<<"\n"; break; }
+            if (etapas[i].getNombre()==buscar[e]) {
+                std::cout<<buscar[e]<<": "<<getConfMayorPresencia(etapas[i])<<"\n"; break;
+            }
             medidor.incrementar();
         }
     medidor.calcularMemoria(48,26,12,6,6,16);
     medidor.reportar("IV - Estadisticas finales");
 }
 
-Lista<Equipo*>&        Torneo::getEquipos()       { return equipos; }
-Lista<Grupo>&          Torneo::getGrupos()        { return grupos;  }
-Lista<Etapa>&          Torneo::getEtapas()        { return etapas;  }
-MedidorRecursos&       Torneo::getMedidor()       { return medidor; }
-const Lista<Equipo*>&  Torneo::getEquipos() const { return equipos; }
-const Lista<Grupo>&    Torneo::getGrupos()  const { return grupos;  }
-const Lista<Etapa>&    Torneo::getEtapas()  const { return etapas;  }
+// -- Getters ----------------------------------------------------------
+
+Lista<Equipo*>&       Torneo::getEquipos()       { return equipos; }
+Lista<Grupo>&         Torneo::getGrupos()        { return grupos;  }
+Lista<Etapa>&         Torneo::getEtapas()        { return etapas;  }
+MedidorRecursos&      Torneo::getMedidor()       { return medidor; }
+const Lista<Equipo*>& Torneo::getEquipos() const { return equipos; }
+const Lista<Grupo>&   Torneo::getGrupos()  const { return grupos;  }
+const Lista<Etapa>&   Torneo::getEtapas()  const { return etapas;  }
 
 /// Devuelve los n mayores goleadores buscando en las 48 plantillas
 Lista<Jugador*> Torneo::getTopGoleadores(int n) const {
     Lista<Jugador*> todos; Lista<int> goles;
     for (int i=0;i<equipos.getTam();i++) {
         Lista<Jugador>& pl=equipos[i]->getPlantilla();
-        for (int j=0;j<pl.getTam();j++) { todos.agregar(&pl[j]); goles.agregar(pl[j].getStatsHistoricas().getGoles()); }
+        for (int j=0;j<pl.getTam();j++) {
+            todos.agregar(&pl[j]);
+            goles.agregar(pl[j].getStatsHistoricas().getGoles());
+        }
     }
     for (int i=0;i<n&&i<todos.getTam();i++)
         for (int j=i+1;j<todos.getTam();j++)
@@ -435,6 +497,7 @@ std::string Torneo::getConfMayorPresencia(const Etapa& etapa) const {
     return confs[maxIdx];
 }
 
+/// Calcula memoria total del torneo en bytes
 size_t Torneo::calcularMemoria() const {
     size_t mem=sizeof(Torneo);
     mem+=sizeof(Equipo)*equipos.getTam();
@@ -445,6 +508,7 @@ size_t Torneo::calcularMemoria() const {
 }
 
 std::ostream& operator<<(std::ostream& os, const Torneo& t) {
-    os<<"Torneo — "<<t.equipos.getTam()<<" equipos | "<<t.grupos.getTam()<<" grupos | "<<t.etapas.getTam()<<" etapas";
+    os<<"Torneo — "<<t.equipos.getTam()<<" equipos | "
+      <<t.grupos.getTam()<<" grupos | "<<t.etapas.getTam()<<" etapas";
     return os;
 }
