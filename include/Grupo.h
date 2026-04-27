@@ -17,7 +17,7 @@ private:
     char           letra;
     Lista<Equipo*> equipos;
     Lista<Partido> partidos;
-    int            puntos[4];
+    int            puntos[4];  // indexado por posicion en equipos[], no en tabla
 
     /// Busca el indice de un equipo dentro de la lista interna
     /// Devuelve -1 si no se encuentra
@@ -27,13 +27,20 @@ public:
     Grupo();
     Grupo(char letra);
     Grupo(const Grupo& otro);
+    Grupo& operator=(const Grupo& otro);
     ~Grupo();
 
-    char                  getLetra()       const;
+    char                  getLetra()             const;
     Lista<Equipo*>&       getEquipos();
     Lista<Partido>&       getPartidos();
-    const Lista<Partido>& getPartidos()    const;
-    int                   getPuntos(int i) const;
+    const Lista<Partido>& getPartidos()          const;
+
+    /// Devuelve puntos por indice interno (0..3)
+    int getPuntos(int i)                         const;
+
+    /// Devuelve puntos de un equipo especifico por puntero
+    /// Uso correcto para obtener puntos de clasificados
+    int getPuntosDeEquipo(Equipo* e)             const;
 
     void agregarEquipo   (Equipo* e);
     void generarPartidos ();
