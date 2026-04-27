@@ -1,6 +1,5 @@
 #ifndef TORNEO_H
 #define TORNEO_H
-
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -26,8 +25,7 @@ private:
     static const std::string FECHA_ELIMINATORIAS;
 
     /// Parsea una linea con separador ';' en campos individuales
-    void parsearLineaCSV(const std::string& linea,
-                         std::string campos[], int maxCampos) const;
+    void parsearLineaCSV(const std::string& linea, std::string campos[], int maxCampos) const;
 
     /// Normaliza el nombre de la confederacion al formato interno
     std::string normalizarConfederacion(const std::string& conf) const;
@@ -69,5 +67,4 @@ public:
 
     friend std::ostream& operator<<(std::ostream& os, const Torneo& t);
 };
-
 #endif
